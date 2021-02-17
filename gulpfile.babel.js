@@ -17,7 +17,7 @@ gulp.task('extras', () => {
   ], {
     base: 'app',
     dot: true
-  }).pipe(gulp.dest('dist'));
+  }).pipe(gulp.dest('unpacked'));
 });
 
 function lint(files, options) {
@@ -47,7 +47,7 @@ gulp.task('images', () => {
       console.log(err);
       this.end();
     })))
-    .pipe(gulp.dest('dist/images'));
+    .pipe(gulp.dest('unpacked/images'));
 });
 
 gulp.task('html',  () => {
@@ -63,7 +63,7 @@ gulp.task('html',  () => {
       minifyJS: true,
       removeComments: true
     })))
-    .pipe(gulp.dest('dist'));
+    .pipe(gulp.dest('unpacked'));
 });
 
 gulp.task('chromeManifest', () => {
@@ -81,7 +81,7 @@ gulp.task('chromeManifest', () => {
   .pipe($.if('*.js', $.sourcemaps.init()))
   .pipe($.if('*.js', $.uglify()))
   .pipe($.if('*.js', $.sourcemaps.write('.')))
-  .pipe(gulp.dest('dist'));
+  .pipe(gulp.dest('unpacked'));
 });
 
 gulp.task('babel', () => {
@@ -93,9 +93,9 @@ gulp.task('babel', () => {
       .pipe(gulp.dest('app/scripts'));
 });
 
-gulp.task('clean', del.bind(null, ['.tmp', 'dist']));
+gulp.task('clean', del.bind(null, ['.tmp', 'unpacked']));
 
-gulp.task('watch', gulp.series('babel', cb => {
+gulp.task('watch', ['lint', 'babel'], () => {
   $.livereload.listen();
 
   gulp.watch([
@@ -106,12 +106,12 @@ gulp.task('watch', gulp.series('babel', cb => {
     'app/_locales/**/*.json'
   ]).on('change', $.livereload.reload);
 
-  gulp.watch('app/scripts.babel/**/*.js', gulp.series(['lint', 'babel']));
-  gulp.watch('bower.json', gulp.series(['wiredep']));
-}));
+  gulp.watch('app/scripts.babel/**/*.js', ['lint', 'babel']);
+  gulp.watch('bower.json', ['wiredep']);
+});
 
 gulp.task('size', () => {
-  return gulp.src('dist/**/*').pipe($.size({title: 'build', gzip: true}));
+  return gulp.src('unpacked/**/*').pipe($.size({title: 'build', gzip: true}));
 });
 
 gulp.task('wiredep', () => {
@@ -123,8 +123,8 @@ gulp.task('wiredep', () => {
 });
 
 gulp.task('package', function () {
-  var manifest = require('./dist/manifest.json');
-  return gulp.src('dist/**')
+  var manifest = require('./unpacked/manifest.json');
+  return gulp.src('unpacked/**')
       .pipe($.zip('csp warning-' + manifest.version + '.zip'))
       .pipe(gulp.dest('package'));
 });
@@ -136,6 +136,6 @@ gulp.task('build', (cb) => {
     'size', cb);
 });
 
-gulp.task('default', gulp.series(['clean'], cb => {
+gulp.task('default', ['clean'], cb => {
   runSequence('build', cb);
-}));
+});
